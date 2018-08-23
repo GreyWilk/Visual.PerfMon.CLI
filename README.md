@@ -1,6 +1,7 @@
 # Visual.PerfMon.CLI
 ## Version 0.9
-New optinal visual style and option to sort on remote computer name
+New optinal visual style and option to sort on remote computer name.
+
 ![](https://user-images.githubusercontent.com/41646439/44540801-5e642b00-a708-11e8-8b1b-db7a63e31137.png)
 ## Version 0.8
 With new changes it's now possible to sort on RAM _or_ CPU. Not both yet.
