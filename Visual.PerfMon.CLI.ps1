@@ -8,18 +8,20 @@
 ## Version 0.8.3 | Added emptying of temporary file and adding null value to variables.
 ## Version 0.8.4 | Changed file name of temporary file to variable. Changed way to sort between RAM and CPU (now only one variable)
 ## Version 0.8.7 | Added option for permanent log file (usable for loggig of specific computers (and then lowering the interval of refresh))
+## Version 0.9.0 | Added option for different types of output. One normal and one compact version
 ##################
 
 ## START Editable variables
-$servers = "localhost","127.0.0.1"                ## It takes about 1-2 sec for local and 2-4 sec for server to read out the data
+$servers = "localhost","127.0.0.1","localhost","localhost"                ## It takes about 1-2 sec for local and 2-4 sec for server to read out the data
 $LimitHighUsedCPU = 85                            ## 1..100. When to show RED for CPU (below this and above $LimitLowUsedCPU will be yellow)
 $LimitLowUsedCPU = 20                             ## 1..100. When to show GREEN for CPU (above this and below $LimitMaxUsedCPU will be yellow)
 $LimitUsedRAM = 60                                ## 1..100. When to show RED for RAM (while above)
-$SortOn = "CPU"                                   ## Current valid values: "RAM" and "CPU". This will sort the chosen type to be shown on the top
+$SortOn = "CPU"                                   ## Current valid values: "NAME", "RAM" and "CPU". This will sort the chosen type to be shown on the top or sorted on server name.
+$DisplayType = "COMPACT"                          ## Current valid values: "COMPACT" and "NORMAL".
 $TimeBetweenRefreshInSeconds = 3                  ## Seconds between refresh (it will take a while to gather the data from the servers and depending on that try out what works for you)
 $RunTime =  1                                     ## How long the script will run in hours
 $UseCIM = "no"                                    ## Yes/No - No uses Get-WMIObject. Yes uses normal CIM.
-$LogToPermanentFile = "No"                       ## Enables logging to "permanent" file which is not removed by script
+$LogToPermanentFile = "No"                        ## Enables logging to "permanent" file which is not removed by script
 $PermanentFileNamePath = "c:\temp\perafile.txt"   ## Path to put permanent logfile
 $ErrorPath = "C:\temp"                            ## Path to put error file
 $TempFileDir = "$env:TEMP"                        ## Directory for temp data (small txt file)
@@ -78,6 +80,7 @@ catch{
     $ErrorTime = Get-Date -Format 'yyyy-MM-dd-HH:mm:ss'
     $ErrorTime | Out-File -Append $ErrorPath\Visual.PerfMon.CLI.Error.txt
     $Error[0] | Out-File -Append $ErrorPath\Visual.PerfMon.CLI.Error.txt
+    "$server,0,0,0,0,0,0,0" | Out-File $TempFileDir\$TempFileName
     break
 }
 
@@ -111,7 +114,10 @@ $sw.Stop()
     $imp_csv_sortcpu | Export-Csv $TempFileDir\$TempFileName -NoTypeInformation
     }
 
-    #elseif( $SortOn -eq "Both" ){}
+    elseif( $SortOn -eq "NAME" ){
+    $imp_csv_sortcpu = Import-Csv $TempFileDir\$TempFileName | Sort-Object -Descending { $_.server }
+    $imp_csv_sortcpu | Export-Csv $TempFileDir\$TempFileName -NoTypeInformation
+    }
 
     elseif(! $SortOn ){
         $ConfWarning1 = "Configuration error!"
@@ -124,7 +130,8 @@ $imp_csv = Import-Csv $TempFileDir\$TempFileName
 cls
 if($ConfWarning1 -ne ""){ Write-Host -ForegroundColor Red $ConfWarning1 $ConfWarning2}
 else{}
-Write-Host -ForegroundColor Yellow "|1%                                                                                            100%|"
+if($DisplayType -eq "NORMAL"){Write-Host -ForegroundColor Yellow "|1%                                                                                            100%|"}
+else{}
 
 foreach($csvrow in $imp_csv){
     $cmdtimesec = $csvrow.cmdtimesec
@@ -144,42 +151,86 @@ foreach($csvrow in $imp_csv){
     $RAMBar = ($PercentRepRAM*$UsedRamRound)
     $CPUBar = ($PercentRepCPU*$UsedCPUValue)
 
-    ## Colors and Texts
-    if($UsedRamRound -gt $LimitUsedRAM ){
-    $RAMBgColor = "Red"
-    $RAMTxtColor = "Red"}
-    Else{
-    $RAMBgColor = "Green"
-    $RAMTxtColor = "Green"}
+        if($DisplayType -eq "NORMAL"){
 
-    if([int]$UsedCPUValue -gt $LimitHighUsedCPU){
-    $CPUBgColor = "DarkRed"
-    $CPUTxtColor = "Red"}
-    Elseif([int]$UsedCPUValue -gt $LimitLowUsedCPU -and $UsedCPUValue -lt $LimitHighUsedCPU){
-    $CPUBgColor = "DarkYellow"
-    $CPUTxtColor = "Yellow"}
-    Elseif([int]$UsedCPUValue -lt $LimitLowUsedCPU){
-    $CPUBgColor = "DarkGreen"
-    $CPUTxtColor = "Green"}
+            ## Colors and Texts
+            if($UsedRamRound -gt $LimitUsedRAM ){
+            $RAMBgColor = "red"
+            $RAMTxtColor = "red"}
+            Else{
+            $RAMBgColor = "green"
+            $RAMTxtColor = "green"}
+            
+            if([int]$UsedCPUValue -gt $LimitHighUsedCPU){
+            $CPUBgColor = "DarkRed"
+            $CPUTxtColor = "Red"}
+            Elseif([int]$UsedCPUValue -gt $LimitLowUsedCPU -and $UsedCPUValue -lt $LimitHighUsedCPU){
+            $CPUBgColor = "DarkYellow"
+            $CPUTxtColor = "Yellow"}
+            Elseif([int]$UsedCPUValue -lt $LimitLowUsedCPU){
+            $CPUBgColor = "DarkGreen"
+            $CPUTxtColor = "Green"}
+                
+            ## Write out in console
+                Write-Host -ForegroundColor $RAMTxtColor -BackgroundColor $RAMBgColor "$RAMBar" -NoNewline
+                Write-Host " $UsedRamRound% RAM used | " -NoNewline
+                Write-Host -ForegroundColor $RAMTxtColor "$imp_server"
+
+                Write-Host -ForegroundColor $CPUTxtColor -BackgroundColor $CPUBgColor "$CPUBar" -NoNewline
+                Write-Host " $UsedCPUValue% CPU used ($cpucores cores) | " -NoNewline
+
+                if($ShowCmdTime -eq $True){
+                Write-Host -ForegroundColor $CPUTxtColor "$imp_server" -NoNewline
+                Write-Host -ForegroundColor Magenta " | Command took: $cmdtimesec sec $cmdtimemilsec milisec "}
+                elseif($ShowCmdTime -eq $False){
+                Write-Host -ForegroundColor $CPUTxtColor "$imp_server"}
+
+                Write-Host ""
+        }
+        elseif($DisplayType -eq "COMPACT"){
+
+            ## Colors and Texts
+            if($UsedRamRound -gt $LimitUsedRAM ){
+            $RAMBgColor = "red"
+            $RAMTxtColor = "black"}
+            Else{
+            $RAMBgColor = "green"
+            $RAMTxtColor = "black"}
+            
+            if([int]$UsedCPUValue -gt $LimitHighUsedCPU){
+            $CPUBgColor = "DarkRed"
+            $CPUTxtColor = "Red"}
+            Elseif([int]$UsedCPUValue -gt $LimitLowUsedCPU -and $UsedCPUValue -lt $LimitHighUsedCPU){
+            $CPUBgColor = "DarkYellow"
+            $CPUTxtColor = "Yellow"}
+            Elseif([int]$UsedCPUValue -lt $LimitLowUsedCPU){
+            $CPUBgColor = "DarkGreen"
+            $CPUTxtColor = "Green"}
+
+            ## Write out in console
+                if([Int]$UsedRamRound -lt 10){$WriteRAMSpace1 = "   "}
+                elseif([Int]$UsedRamRound -ge 10 -and [Int]$UsedRamRound -lt 100){$WriteRAMSpace1 = "  "}
+                elseif([Int]$UsedRamRound -gt 99){$WriteRAMSpace1 = " "}
     
-## Write out in console
-    Write-Host -ForegroundColor $RAMTxtColor -BackgroundColor $RAMBgColor "$RAMBar" -NoNewline
-    Write-Host " $UsedRamRound% RAM used | " -NoNewline
-    Write-Host -ForegroundColor $RAMTxtColor "$imp_server"
+                if([Int]$UsedCPUValue -lt 10){$WriteCPUSpace1 = "   "}
+                elseif([Int]$UsedCPUValue -ge 10 -and [Int]$UsedCPUValue -lt "100"){$WriteCPUSpace1 = "  "}
+                elseif([Int]$UsedCPUValue -gt 99){$WriteCPUSpace1 = " "}
 
-    Write-Host -ForegroundColor $CPUTxtColor -BackgroundColor $CPUBgColor "$CPUBar" -NoNewline
-    Write-Host " $UsedCPUValue% CPU used ($cpucores cores) | " -NoNewline
-
-        if($ShowCmdTime -eq $True){
-        Write-Host -ForegroundColor $CPUTxtColor "$imp_server" -NoNewline
-        Write-Host -ForegroundColor Magenta " | Command took: $cmdtimesec sec $cmdtimemilsec milisec "}
-        elseif($ShowCmdTime -eq $False){
-        Write-Host -ForegroundColor $CPUTxtColor "$imp_server"}
-
-    Write-Host ""
+            
+                Write-Host -ForegroundColor $RAMTxtColor -BackgroundColor $RAMBgColor "$WriteRAMSpace1"  -NoNewline
+                Write-Host -ForegroundColor $RAMTxtColor -BackgroundColor $RAMBgColor "$UsedRamRound% RAM" -NoNewline
+                Write-Host -ForegroundColor $RAMTxtColor -BackgroundColor $RAMBgColor "  " -NoNewline
+                Write-Host " | " -NoNewline
+                Write-Host -ForegroundColor $CPUTxtColor -BackgroundColor $CPUBgColor "$WriteCPUSpace1"  -NoNewline
+                Write-Host -ForegroundColor $CPUTxtColor -BackgroundColor $CPUBgColor "$UsedCPUValue% CPU" -NoNewline
+                Write-Host -ForegroundColor $CPUTxtColor -BackgroundColor $CPUBgColor "  " -NoNewline
+                Write-Host " | " -NoNewline
+                Write-Host "$imp_server"
+        }
+        else{write-host "DisplayType missing in settings"
 }
-
+}
 start-sleep $TimeBetweenRefreshInSeconds
-
 }
+
 until((Get-Date) -gt $TimeNow.AddHours($RunTime))
