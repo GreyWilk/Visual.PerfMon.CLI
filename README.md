@@ -3,8 +3,8 @@ With this tool you can collect RAM and CPU data from remote computers via WMI or
 This data can be displayed in the consol window with two different styles and also logged to a permanent file for historic use.
 
 - Developed on Windows Server 2012 R2 with PowerShell 5.0.
-- Tested on and to read data from Windows Server 2012 R2 with PowerShell 4.0.
-- Tested to read data from Windows Server 2008 R2.
+- Tested (and verified) on and to read data from Windows Server 2012 R2 with PowerShell 4.0.
+- Tested (and verified) to read data from Windows Server 2008 R2.
 
 ## Version 0.9
 New optional visual style and option to sort on remote computer name.
