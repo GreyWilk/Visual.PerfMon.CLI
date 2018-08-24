@@ -1,5 +1,5 @@
 # Visual.PerfMon.CLI
-With this tool you can collect RAM and CPU data from remote computers via WMI och CIM.
+With this tool you can collect RAM and CPU data from remote computers via WMI or CIM.
 This data can be displayed in the consol window with two different styles and also logged to a permanent file for historic use.
 
 ## Version 0.9
