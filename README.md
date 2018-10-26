@@ -6,6 +6,10 @@ This data can be displayed in the consol window with two different styles and al
 - Tested (and verified) on and to read data from Windows Server 2012 R2 with PowerShell 4.0.
 - Tested (and verified) to read data from Windows Server 2008 R2.
 
+## Version 0.9.1
+Various bug fixes.
+Added visual Online/Offline status for targets.
+
 ## Version 0.9
 New optional visual style and option to sort on remote computer name.
 
